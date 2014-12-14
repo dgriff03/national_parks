@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.land {
+  fill: #222;
+  opacity: 0.2;
+}
+
+.county-boundary {
+  fill: none;
+  stroke: #fff;
+  stroke-width: .5px;
+}
+
+.state-boundary {
+  fill: none;
+  stroke: #fff;
+}
+
+.parks{
+  stroke:#f00;
+  fill:#f00;
+}
+
+</style>
+<body>
+<div id="tooltip">Park: <span id="parkName"></span></div>
+ <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+
+<script>
+
+var width = 960,
+    height = 500;
+
+var projection = d3.geo.albersUsa()
+    .scale(1000)
+    .translate([width / 2, height / 2]);
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+d3.json("us-10m.json", function(error, us) {
+  svg.insert("path", ".graticule")
+      .datum(topojson.feature(us, us.objects.land))
+      .attr("class", "land")
+      .attr("d", path);
+
+  svg.insert("path", ".graticule")
+      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+      .attr("class", "state-boundary")
+      .attr("d", path);
+  $(".state-boundary").prependTo($("svg"));
+  $(".land").prependTo($("svg"));
+});
+
+
+// var y = d3.scale.linear()
+//     .range([height, 0]);
+
+d3.json("data.json", function(error, data) {
+  count = 0;
+  svg.selectAll("circles.parks")
+    .data(data)
+    .enter()
+    .append("circle")
+    .attr("r",5)
+    .attr("class","parks")
+    .attr("transform", function(d){
+        var geos = d.geo.split(";")
+        var lng = parseFloat(geos[0]);
+        var lat = parseFloat(geos[1]);
+        if (projection([lat,lng]) == null){
+          count+=1;
+          return "translate(900," + (250 + count * 50)+")";
+        }
+        return "translate(" + projection([lat,lng]) + ")";})
+    .attr("data-name",function(d){d.name})
+    .on('mouseover', function(d){
+      var park = d3.select(this);
+        park.attr("r",10);
+        $("#parkName").text(d.name);
+    })
+    .on('mouseout', function(){
+      d3.select(this).attr("r",5);
+      $("#parkName").text("");
+    })
+    .append("svg:title")
+    .text(function(d) { return d.name; });
+});
+
+
+d3.select(self.frameElement).style("height", height + "px");
+
+
+</script>
